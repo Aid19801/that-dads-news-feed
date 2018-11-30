@@ -1,38 +1,34 @@
-// express server
-var express = require("express");
-var bodyParser = require("body-parser");
-var app = express();
+
+// server
+const functions = require('firebase-functions');
+const express = require('express');
+var bodyParser = require('body-parser');
+const app = express();
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-var appRouter = (app) => {
-    app.get("/", (req, res) => {
+app.get('/api', (request, response) => {
 
-        // 1. as soon as you hit root, clear the array
-        arrayOfNewsStoryObjects = [];
-        console.log('beginning scrape...');
-        let morning = []; // clear the morning itinerary
-        getIndependent()
-            .then(() => {
-                console.log('Independent Done...');
-                getBBCNews()
-                    .then(() => {
-                        console.log('BBC Done...');
-                        console.log('BBC News and The Independent done! number of stories: ', arrayOfNewsStoryObjects.length);
-                        const shuffledStories = shuffleStories(arrayOfNewsStoryObjects);
-                        morning = JSON.stringify(shuffledStories); // morning is the freshly shuffled assortment of news stories
-                        res.send(morning); // send that as json to root calls.
-                    })
-            }).catch(err => console.log('err: ', err));
-    });
-}
-
-appRouter(app);
-
-var server = app.listen(process.env.PORT || 5000, () => {
-    console.log("app running on port.", server.address().port);
+     // 1. as soon as you hit root, clear the array
+     arrayOfNewsStoryObjects = [];
+     console.log('beginning scrape...');
+     let morning = []; // clear the morning itinerary
+     getIndependent()
+         .then((indy) => {
+             console.log('Independent Done...indy length', indy);
+             getBBCNews()
+                 .then(() => {
+                     console.log('BBC Done...');
+                     console.log('BBC News and The Independent done! number of stories: ', arrayOfNewsStoryObjects.length);
+                     const shuffledStories = shuffleStories(arrayOfNewsStoryObjects);
+                     morning = JSON.stringify(shuffledStories); // morning is the freshly shuffled assortment of news stories
+                     response.send(morning); // send that as json to root calls.
+                 })
+         }).catch(err => console.log('err: ', err));
 });
+
+exports.app = functions.https.onRequest(app);
 
 
 // web scraper
@@ -107,34 +103,52 @@ const optionsIndependent = {
 
 const getIndependent = () => {
     return new Promise((resolve, reject) => {
-
         rp(optionsIndependent)
             .then(($) => {
-                const articleElement = $('.half-height');
+                const articleElement = $('.articles').find('.article')
                 $(articleElement).each((index, element) => {
 
-                    let independentNewsObject = {};
+                    // newsobject slowly gets filled with scrape info.
+                    let IndyNewsObject = {};
 
-                    const org = 'The Independent';
-                    const headline = $(element).find('.content').find('h1').text();
-                    const blurb = $(element).find('.lead').text().trim();
-                    const url = $(element).find('.container-half').find('.content').find('h1').find('a').attr('href');
-                    let imgUrl = $(element).find('.image').attr('data-original');
+                    // SOURCE
+                    let org = 'Indy';
 
+                    // URL / LINK FOR THE STORY
+                    let linkFromIndy = $(element).find('a').attr('href');
+                    let url = `https://www.independent.co.uk${linkFromIndy}`;
+
+                    // HEADLINE
+                    let headlinePrefix = $(element).find('.content').find('.capsules').find('a').find('span').text().trim();
+                    let headlineMain = $(element).find('.content').find('a').find('.headline').text();
+
+                    // IMAGE
+                    let imgUrl = $(element).find('a').find('.amp-img').attr('src');
+
+
+                    // if image isnt there, put a placeholder in.
                     if (!imgUrl) {
                         imgUrl = 'https://nyuad.nyu.edu/en/academics/divisions/arts-and-humanities/faculty/salem-al-qassimi/_jcr_content/bio-info/image.adaptive.m1510292743173/394.jpg';
                     }
 
-                    if (!headline || !url) {
-                        console.log(' ======== url or headline missing =======')
-                        console.log(' ======== URL:', url)
-                        console.log(' ======== headline:', headline);
+                    // if headline or URL are missing, abort adding this story to the feed.
+                    if (!headlinePrefix || !url) {
+                        console.log('headline or url are missing, aborting');
                         return;
                     }
 
-                    Object.assign(independentNewsObject, { org, headline, blurb, url: `https://www.independent.co.uk${url}`, imgUrl, });
-                    arrayOfNewsStoryObjects.push(independentNewsObject);
+                    Object.assign(IndyNewsObject, {
+                        org: 'Indy',
+                        url: url,
+                        headline: headlinePrefix + ': ' + headlineMain.replace(/\n/g, '').trim(),
+                        imgUrl: imgUrl,
+                    })
+
+                    // push it to main array of news stories
+                    arrayOfNewsStoryObjects.push(IndyNewsObject);
                 })
+                
+                // return for next scrape to use/add to
                 resolve(arrayOfNewsStoryObjects);
             })
             .catch((err) => reject(err));
