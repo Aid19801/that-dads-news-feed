@@ -1,0 +1,30 @@
+{
+  "name": "that-dads-news-feed",
+  "version": "1.0.0",
+  "engines": {
+    "node": "10.13.0",
+    "npm": "6.4.1",
+    "yarn": "1.12.1"
+  },
+  "description": "that-dads-news-feed is an Express, Node JS and Cheerio feed for that-dads-app's newsfeed section",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "keywords": [
+    "json-server, node, REST API"
+  ],
+  "author": "Adrian Thompson",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.18.3",
+    "cheerio": "^1.0.0-rc.2",
+    "express": "^4.16.3",
+    "request": "^2.88.0",
+    "request-promise": "^4.2.2"
+  },
+  "devDependencies": {
+    "nodemon": "^1.18.4"
+  }
+}
